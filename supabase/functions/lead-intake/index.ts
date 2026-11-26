@@ -21,7 +21,7 @@ Deno.serve(async request=>{
  if(!service||!url||!secret)return response(503,{error:"Servicio aún no configurado"},origin);
  if(Number(request.headers.get("content-length")||0)>12000)return response(413,{error:"Solicitud demasiado extensa"},origin);
  let body:Record<string,unknown>;
- try{body=await request.json();if(!body||Array.isArray(body)||typeof body!=="object")throw Error("bad");}catch{return response(400,{error:"Solicitud inválida"},origin)}
+ try{const raw=await request.text();if(raw.length>12000)return response(413,{error:"Solicitud demasiado extensa"},origin);body=JSON.parse(raw);if(!body||Array.isArray(body)||typeof body!=="object")throw Error("bad");}catch{return response(400,{error:"Solicitud inválida"},origin)}
  const name=txt(body.name,80),email=txt(body.email,180).toLowerCase(),phone=txt(body.phone,30),country=txt(body.country,65);
  const profile=txt(body.profile,60),goal=txt(body.goal,80),channel=txt(body.channel,80),challenge=txt(body.challenge,1000),rec=txt(body.recommendation,160);
  const utm=txt(body.utm_source,50).replace(/[^a-z0-9_\-]/gi,"");
