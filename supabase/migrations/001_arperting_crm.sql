@@ -42,12 +42,7 @@ create index if not exists arperting_activity_lead_idx on public.arperting_lead_
 alter table public.arperting_staff enable row level security;
 alter table public.arperting_leads enable row level security;
 alter table public.arperting_lead_activity enable row level security;
--- Función con owner seguro, no se utiliza user_metadata como señal de autorización.
-create or replace function public.arperting_is_staff() returns boolean language sql stable security definer set search_path = '' as $$
-  select exists(select 1 from public.arperting_staff where user_id = (select auth.uid()));
-$$;
-revoke all on function public.arperting_is_staff() from public;
-grant execute on function public.arperting_is_staff() to authenticated;
+-- Personal autorizado consultado usando RLS en arperting_staff; sin funciones SECURITY DEFINER públicas.
 revoke all on public.arperting_leads,public.arperting_staff,public.arperting_lead_activity from anon;
 grant select on public.arperting_staff to authenticated;
 grant select,update on public.arperting_leads to authenticated;
@@ -55,13 +50,13 @@ grant select,insert on public.arperting_lead_activity to authenticated;
 drop policy if exists staff_self_read on public.arperting_staff;
 create policy staff_self_read on public.arperting_staff for select to authenticated using(user_id=(select auth.uid()));
 drop policy if exists lead_staff_read on public.arperting_leads;
-create policy lead_staff_read on public.arperting_leads for select to authenticated using((select public.arperting_is_staff()));
+create policy lead_staff_read on public.arperting_leads for select to authenticated using((exists (select 1 from public.arperting_staff where user_id = (select auth.uid()))));
 drop policy if exists lead_staff_update on public.arperting_leads;
-create policy lead_staff_update on public.arperting_leads for update to authenticated using((select public.arperting_is_staff())) with check((select public.arperting_is_staff()));
+create policy lead_staff_update on public.arperting_leads for update to authenticated using((exists (select 1 from public.arperting_staff where user_id = (select auth.uid())))) with check((exists (select 1 from public.arperting_staff where user_id = (select auth.uid()))));
 drop policy if exists activity_staff_read on public.arperting_lead_activity;
-create policy activity_staff_read on public.arperting_lead_activity for select to authenticated using((select public.arperting_is_staff()));
+create policy activity_staff_read on public.arperting_lead_activity for select to authenticated using((exists (select 1 from public.arperting_staff where user_id = (select auth.uid()))));
 drop policy if exists activity_staff_insert on public.arperting_lead_activity;
-create policy activity_staff_insert on public.arperting_lead_activity for insert to authenticated with check((select public.arperting_is_staff()) and actor_id=(select auth.uid()));
+create policy activity_staff_insert on public.arperting_lead_activity for insert to authenticated with check((exists (select 1 from public.arperting_staff where user_id = (select auth.uid()))) and actor_id=(select auth.uid()));
 -- No existe política pública INSERT en leads: solo la Edge Function inserta con clave de servidor.
 -- Dar acceso únicamente a la cuenta autorizada. Reemplazar el correo y ejecutar UNA vez:
 -- insert into public.arperting_staff(user_id,role)
