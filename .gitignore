@@ -1,0 +1,9 @@
+# ARPERTING — nunca versionar secretos
+.env
+.env.*
+!.env.example
+supabase/.env
+supabase/functions/.env
+supabase/.branches
+node_modules/
+.DS_Store
